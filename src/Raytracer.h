@@ -7,8 +7,9 @@ class Raytracer
 {
 public:
 	Raytracer(int width, int height)
-		:frame_buffer_(width* height), width(width), height(height), fov(75), sphere(nullptr){}
-	void render(Sphere* _sphere);
+		:frame_buffer_(width* height), width(width), height(height), fov(75){}
+	void set_render_targets(std::vector<Sphere*>& spheres);
+	void render();
 
 private:
 	void fill_frame_buffer();
@@ -23,5 +24,5 @@ private:
 	int height;
 	const float fov;
 
-	Sphere* sphere;
+	std::vector<Sphere*> spheres;
 };

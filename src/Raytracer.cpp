@@ -5,16 +5,20 @@
 #include <limits>
 #include <algorithm>
 
-void Raytracer::render(Sphere* _sphere)
+void Raytracer::render()
 {
-	sphere = _sphere;
 	fill_frame_buffer();
 	write_image_to_disk();
 }
 
+void Raytracer::set_render_targets(std::vector<Sphere*>& spheres)
+{
+	this->spheres = spheres;
+}
+
 void Raytracer::fill_frame_buffer()
 {
- 	for (size_t j = 0; j < height; j++)
+	for (size_t j = 0; j < height; j++)
 	{
 		for (size_t i = 0; i < width; i++)
 		{
@@ -34,11 +38,11 @@ void Raytracer::push_to_pixel_buffer()
 	pixels = new uint8_t[width * height * 3];
 
 	auto index = 0;
-	for (auto j = 0;j<height;j++)
+	for (auto j = 0; j < height; j++)
 	{
 		for (auto i = 0; i < width; ++i)
 		{
-			const auto target_pixel = frame_buffer_[i + j*width];
+			const auto target_pixel = frame_buffer_[i + j * width];
 			pixels[index++] = int(255.99 * target_pixel.r);
 			pixels[index++] = int(255.99 * target_pixel.g);
 			pixels[index++] = int(255.99 * target_pixel.b);
@@ -54,9 +58,16 @@ void Raytracer::write_image_to_disk()
 
 glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection)
 {
-	if(!sphere->ray_intersect(rayOrigin,rayDirection))
+	auto any_intersection = false;
+	for (auto sphere : spheres)
 	{
-		return glm::vec3(0.2, 0.7, 0.8);
+		if (sphere->ray_intersect(rayOrigin, rayDirection))
+		{
+			any_intersection = true;
+		}
 	}
-	return glm::vec3(0.4, 0.4, 0.3);
+	if (!any_intersection)
+		return glm::vec3(0.2, 0.7, 0.8);
+	else
+		return glm::vec3(0.4, 0.4, 0.3);
 }
