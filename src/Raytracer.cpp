@@ -58,16 +58,19 @@ void Raytracer::write_image_to_disk()
 
 glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection)
 {
-	auto any_intersection = false;
+	float zDistance = 1000.f;
+	Sphere* selected = nullptr;
 	for (auto sphere : spheres)
 	{
-		if (sphere->ray_intersect(rayOrigin, rayDirection))
+		float sphereDistance = 1000.f;
+		if (sphere->ray_intersect(rayOrigin, rayDirection, sphereDistance) && sphereDistance < zDistance)
 		{
-			any_intersection = true;
+			selected = sphere;
+			zDistance = sphereDistance;
 		}
 	}
-	if (!any_intersection)
-		return glm::vec3(0.2, 0.7, 0.8);
+	if (selected != nullptr)
+		return selected->material->diffuse;
 	else
 		return glm::vec3(0.4, 0.4, 0.3);
 }

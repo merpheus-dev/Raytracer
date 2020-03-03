@@ -160,6 +160,7 @@
     <ClCompile Include="src\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Material.h" />
     <ClInclude Include="src\Raytracer.h" />
     <ClInclude Include="src\Sphere.h" />
     <ClInclude Include="src\stb_image_write.h" />
