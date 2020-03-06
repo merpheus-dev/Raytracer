@@ -32,7 +32,7 @@ void Raytracer::fill_frame_buffer()
 			const auto x = (2 * (i * .5f) / float(width) - 1) * glm::tan(fov / 2.f) * aspectRatio;
 			const auto y = -(2 * (j * .5f) / float(height) - 1) * glm::tan(fov / 2.f);
 			glm::vec3 rayDir = glm::normalize(glm::vec3(x, y, 1));
-			frame_buffer_[i + j * width] = cast_ray(glm::vec3(0), rayDir);
+			frame_buffer_[i + j * width] = cast_ray(glm::vec3(0), rayDir, 0);
 		}
 	}
 }
@@ -63,10 +63,10 @@ void Raytracer::write_image_to_disk()
 	stbi_write_jpg("test.jpg", width, height, 3, pixels, 100);
 }
 
-glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection)
+glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection, int depth, Sphere* _selected)
 {
 	float zDistance = farPlane;
-	Sphere* selected = nullptr;
+	Sphere* selected = _selected;
 
 	glm::vec3 intersectionWorldPos, surfaceNormal;
 
@@ -81,6 +81,16 @@ glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDir
 			surfaceNormal = glm::normalize(intersectionWorldPos - sphere->_center);
 		}
 	}
+
+	glm::vec3 reflection_color = glm::vec3(0);
+	if (depth < 4)
+	{
+		glm::vec3 reflect_dir = glm::normalize(glm::reflect(rayDirection, surfaceNormal));
+		glm::vec3 reflect_origin = rayOrigin + surfaceNormal * 1e-3f * (glm::dot(reflect_dir, surfaceNormal) < 0.f ? -1.f : 1.f);
+		//reflect_origin = glm::reflect(reflect_origin, glm::normalize(selected->_center));
+		reflection_color = cast_ray(reflect_origin, reflect_dir, depth + 1, _selected);
+	}
+
 	auto total_diffuse_contribution = 0.f;
 	auto total_specular_contribution = 0.f;
 	for (auto light : lights)
@@ -91,9 +101,9 @@ glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDir
 		glm::vec3 diffVector = (light->position - intersectionWorldPos);
 		float lightDistance = glm::sqrt(diffVector.x * diffVector.x + diffVector.y * diffVector.y + diffVector.z * diffVector.z);
 		glm::vec3 shadowLightDir = glm::reflect(lightDirection, glm::vec3(0, 0, 1));
-		//shadowLightDir = glm::reflect(shadowLightDir, glm::vec3(0, 0, 1));
+		shadowLightDir = glm::reflect(shadowLightDir, glm::vec3(0, 1, 0));
 
-		glm::vec3 shadowRayOrigin = intersectionWorldPos + surfaceNormal * 1e-3f * (glm::dot(shadowLightDir, surfaceNormal) < 0.f ? - 1.f: 1.f);
+		glm::vec3 shadowRayOrigin = intersectionWorldPos + surfaceNormal * 1e-3f * (glm::dot(shadowLightDir, surfaceNormal) < 0.f ? -1.f : 1.f);
 
 		bool inShadow = false;
 		for (auto sphere : spheres)
@@ -111,23 +121,26 @@ glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDir
 				}
 			}
 		}
-		
+
 		if (inShadow) continue;
 		// Lambert lighting with clamping it with zero.
 		total_diffuse_contribution += light->intensity * std::max(0.f, glm::dot(surfaceNormal, lightDirection));
 		if (selected != nullptr)
 		{
-			const auto specular = std::max(0.f, glm::dot(glm::reflect(lightDirection, surfaceNormal),-rayDirection));
+			const auto specular = std::max(0.f, glm::dot(glm::reflect(lightDirection, surfaceNormal), -rayDirection));
 			total_specular_contribution += light->intensity * glm::pow(specular, selected->material->specular_power) * selected->material->reflectivity;
 		}
 	}
 
-	if (selected != nullptr)
+	if (selected != nullptr && depth < 4)
 	{
-		auto val = selected->material->diffuse * total_diffuse_contribution + selected->material->specular_color * total_specular_contribution;
+		auto val = selected->material->diffuse * total_diffuse_contribution + selected->material->specular_color * total_specular_contribution +
+			reflection_color * selected->material->metallic;
+		if (selected->material->metallic > 0)
+			val = reflection_color * selected->material->metallic;
 		return val;
 	}
 	else
-		return glm::vec3(0.2, 0.7, 0.8);
+		return glm::vec3(0.9, 0.89, 0.89);
 }
 

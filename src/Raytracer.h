@@ -20,7 +20,7 @@ private:
 	void push_to_pixel_buffer();
 	void write_image_to_disk();
 	///Return pixel color info
-	glm::vec3 cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection);
+	glm::vec3 cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDirection,int depth, Sphere* _selected = nullptr);
 
 private:
 	std::vector<glm::vec3> frame_buffer_;
