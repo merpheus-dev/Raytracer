@@ -86,18 +86,26 @@ glm::vec3 Raytracer::cast_ray(const glm::vec3& rayOrigin, const glm::vec3 rayDir
 	for (auto light : lights)
 	{
 		glm::vec3 lightDirection = glm::normalize(light->position - intersectionWorldPos); //get light direction vec
-		float lightDistance = glm::distance(light->position, intersectionWorldPos);
+		//lightDirection = glm::reflect(lightDirection, glm::vec3(0, 1, 0));
+		lightDirection = glm::reflect(lightDirection, glm::vec3(0, 0, 1));
+		glm::vec3 diffVector = (light->position - intersectionWorldPos);
+		float lightDistance = glm::sqrt(diffVector.x * diffVector.x + diffVector.y * diffVector.y + diffVector.z * diffVector.z);
+		glm::vec3 shadowLightDir = glm::reflect(lightDirection, glm::vec3(0, 0, 1));
+		//shadowLightDir = glm::reflect(shadowLightDir, glm::vec3(0, 0, 1));
 
-		glm::vec3 shadowRayOrigin = intersectionWorldPos + surfaceNormal * 1e-3f * (glm::dot(lightDirection, surfaceNormal) < 0.f ? - 1.f: 1.f);
+		glm::vec3 shadowRayOrigin = intersectionWorldPos + surfaceNormal * 1e-3f * (glm::dot(shadowLightDir, surfaceNormal) < 0.f ? - 1.f: 1.f);
 
 		bool inShadow = false;
 		for (auto sphere : spheres)
 		{
 			float intersectionDistance = farPlane;
-			if (sphere->ray_intersect(shadowRayOrigin, lightDirection, intersectionDistance))
+			//glm::vec3 reflectedVector = glm::reflect(lightDirection, glm::vec3(1, 0, 0));
+			if (sphere->ray_intersect(shadowRayOrigin, shadowLightDir, intersectionDistance))
 			{
-				glm::vec3 shadowHitPointWorldPos = shadowRayOrigin + lightDirection * intersectionDistance;
-				if (glm::distance(shadowHitPointWorldPos, shadowRayOrigin) < lightDistance) {
+				glm::vec3 shadowHitPointWorldPos = shadowRayOrigin + shadowLightDir * intersectionDistance;
+				glm::vec3 tempDiffVector = (shadowHitPointWorldPos - shadowRayOrigin);
+				float tempDist = glm::sqrt(tempDiffVector.x * tempDiffVector.x + tempDiffVector.y * tempDiffVector.y + tempDiffVector.z * tempDiffVector.z);
+				if (tempDist < lightDistance) {
 					inShadow = true;
 					break;
 				}
